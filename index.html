@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BilimJang</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0b1630;--card:#16264a;--line:#243a6b;--text:#f2f5ff;--mute:#9fb0d6;--gold:#ffc83d;--blue:#1f7bff;--ok:#22b45a;--bad:#e5484d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{max-width:480px;margin:0 auto;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+h1{font-size:34px;margin:8px 0 4px;text-align:center;color:var(--gold)}
+h2{font-size:22px;margin:12px 0}
+p{color:var(--mute);line-height:1.45}
+.center{text-align:center}
+.coin{display:inline-block;width:1.1em;height:1.1em;border-radius:50%;background:var(--gold);color:#5a3b00;font-size:.75em;font-weight:800;line-height:1.1em;text-align:center;vertical-align:middle}
+.btn{display:block;width:100%;padding:15px;margin:10px 0;border:0;border-radius:12px;background:var(--blue);color:#fff;font-size:17px;font-weight:600}
+.btn.alt{background:var(--card);border:1px solid var(--line)}
+.opt{display:block;width:100%;text-align:left;padding:15px;margin:9px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font-size:16px}
+.opt.ok{background:var(--ok);border-color:var(--ok)}
+.opt.bad{background:var(--bad);border-color:var(--bad)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:10px 0 16px}
+.bar i{display:block;height:100%;background:var(--blue);transition:width .3s}
+.tag{display:inline-block;padding:3px 10px;border-radius:8px;background:var(--line);font-size:13px;color:var(--mute)}
+.q{font-size:20px;line-height:1.35;margin:14px 0 10px;font-weight:600}
+.row{display:flex;justify-content:space-between;padding:13px 4px;border-bottom:1px solid var(--line)}
+.big{font-size:44px;font-weight:800;color:var(--gold);text-align:center;margin:16px 0}
+.nav{position:sticky;bottom:0;display:flex;gap:8px;margin-top:20px}
+.nav button{flex:1;padding:12px 4px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--mute);font-size:14px}
+.nav button.on{color:var(--gold);border-color:var(--gold)}
+.note{font-size:13px;margin-top:18px}
+@media (prefers-color-scheme:light){}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const user = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || {first_name: "Mehmon"};
+
+// Savollar: birinchi javob to'g'ri, ilova o'zi aralashtiradi
+const BANK = [
+ ["Matematika","7 × 8 nechaga teng?",["56","54","48","64"]],
+ ["Matematika","Uchburchak burchaklari yig'indisi necha gradus?",["180°","90°","360°","270°"]],
+ ["Geografiya","O'zbekiston poytaxti qaysi shahar?",["Toshkent","Samarqand","Buxoro","Namangan"]],
+ ["Geografiya","Eng katta okean qaysi?",["Tinch okeani","Atlantika","Hind okeani","Shimoliy Muz okeani"]],
+ ["Astronomiya","Yer Quyosh atrofida to'liq aylanishi uchun qancha vaqt kerak?",["365 kun","30 kun","100 kun","24 soat"]],
+ ["Kimyo","Suvning kimyoviy formulasi qaysi?",["H₂O","CO₂","O₂","NaCl"]],
+ ["Biologiya","Fotosintezda o'simlik qaysi gazni yutadi?",["Karbonat angidrid","Kislorod","Azot","Vodorod"]],
+ ["Tarix","Amir Temur qaysi yilda tug'ilgan?",["1336","1405","1500","1220"]],
+ ["Adabiyot","«Xamsa» asarini kim yozgan?",["Alisher Navoiy","Bobur","Cho'lpon","Abdulla Qodiriy"]],
+ ["Futbol","Futbol jamoasi maydonda nechta o'yinchi bilan o'ynaydi?",["11","10","9","12"]],
+ ["Futbol","2022-yilgi Jahon chempionatini kim yutdi?",["Argentina","Fransiya","Braziliya","Xorvatiya"]],
+ ["Futbol","Jahon chempionati necha yilda bir marta o'tkaziladi?",["4","2","3","5"]]
+];
+const REWARD = 10;
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]} return a; };
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+let balance = store.get("balance",0), tab = "home", game = null;
+const $ = document.getElementById("app");
+const coin = '<span class="coin">T</span>';
+
+function nav(){ 
+  const t=[["home","Asosiy"],["quiz","Viktorina"],["bal","Balans"],["top","Reyting"]];
+  return '<div class="nav">'+t.map(([k,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${n}</button>`).join("")+'</div>';
+}
+function go(t){ tab=t; if(t==="quiz") start(); else render(); }
+function start(){
+  game = {qs: shuffle(BANK).slice(0,10).map(q=>({c:q[0],t:q[1],o:shuffle(q[2]),a:q[2][0]})), i:0, right:0, done:false, picked:null};
+  render();
+}
+function pick(n){
+  const q=game.qs[game.i]; if(game.picked!==null) return;
+  game.picked=n;
+  if(q.o[n]===q.a){ game.right++; balance+=REWARD; store.set("balance",balance); if(tg&&tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); }
+  else if(tg&&tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+  render();
+}
+function next(){ game.i++; game.picked=null; if(game.i>=game.qs.length) game.done=true; render(); }
+
+function render(){
+  let h="";
+  if(tab==="home"){
+    h=`<h1>BilimJang</h1><p class="center">Bilimingni sinab, TOKEN yut!<br>Salom, ${user.first_name}!</p>
+    <div class="big">${coin} ${balance}</div>
+    <button class="btn" onclick="go('quiz')">Boshlash</button>
+    <p class="center">Maktab fanlari va futbol bo'yicha savollar. Har to'g'ri javob uchun ${REWARD} TOKEN.</p>`;
+  } else if(tab==="quiz" && game){
+    if(game.done){
+      h=`<h2 class="center">Viktorina yakunlandi!</h2>
+      <div class="row"><span>Savollar soni</span><b>${game.qs.length}</b></div>
+      <div class="row"><span>To'g'ri javoblar</span><b>${game.right}</b></div>
+      <div class="row"><span>Yig'ilgan TOKEN</span><b>${coin} ${game.right*REWARD}</b></div>
+      <button class="btn" onclick="start()">Qayta o'ynash</button>
+      <button class="btn alt" onclick="go('home')">Menyu</button>`;
+    } else {
+      const q=game.qs[game.i], p=game.picked;
+      h=`<div class="row" style="border:0"><span>${game.i+1} / ${game.qs.length}</span><span class="tag">${q.c}</span></div>
+      <div class="bar"><i style="width:${(game.i+(p!==null?1:0))/game.qs.length*100}%"></i></div>
+      <div class="q">${q.t}</div>`+
+      q.o.map((o,n)=>{
+        let c=""; if(p!==null){ if(o===q.a) c="ok"; else if(n===p) c="bad"; }
+        return `<button class="opt ${c}" onclick="pick(${n})">${"ABCD"[n]}) ${o}</button>`;
+      }).join("")+
+      (p!==null?`<p class="center"><b style="color:${q.o[p]===q.a?'var(--ok)':'var(--bad)'}">${q.o[p]===q.a?"To'g'ri! +"+REWARD+" TOKEN":"Noto'g'ri"}</b></p>
+      <button class="btn" onclick="next()">${game.i+1===game.qs.length?"Natija":"Keyingi savol"}</button>`:"");
+    }
+  } else if(tab==="bal"){
+    h=`<h2 class="center">Mening balansim</h2><div class="big">${coin} ${balance}</div>
+    <p class="center">TOKEN faqat ilova ichida ishlatiladi: yordamchilar, bezaklar va turnirga kirish. Do'kon tez orada.</p>`;
+  } else if(tab==="top"){
+    const rows=[["Azamjon",2450],["Sardor",1980],[user.first_name+" (siz)",balance]].sort((a,b)=>b[1]-a[1]);
+    h=`<h2 class="center">Reyting</h2>`+rows.map((r,i)=>`<div class="row"><span>${i+1}. ${r[0]}</span><b>${coin} ${r[1]}</b></div>`).join("")+
+    `<p class="note center">Hozircha namunaviy reyting. Haqiqiy reyting serverdan keyin ulanadi.</p>`;
+  }
+  $.innerHTML = h + nav();
+  window.scrollTo(0,0);
+}
+render();
+</script>
+</body>
+</html>
